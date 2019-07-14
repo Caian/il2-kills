@@ -129,7 +129,7 @@ def scan_dir(dir):
     logging.info("Found %d renamable tracks.", len(tracks))
 
 
-def scan_server(server, user):
+def scan_server(server, user, sortie_callback):
     """"""
     # Get the main sorties page
     url = '%ssorties/%s/' % (server, user)
@@ -189,12 +189,13 @@ def scan_server(server, user):
                 if ca < 0:
                     logging.critical("Missing '%s' after '%s'!", text_sortie, text_ca)
                     exit(1)
+                last_sortie = ca
                 # Scan through all HTML table columns for the data
                 last_cell = sortie
                 line = []
                 while True:
                     cell = html.find(text_cell, last_cell + 1)
-                    if cell < 0 or cell > ca:
+                    if cell < 0 or cell > last_sortie:
                         break
                     cdiv = html.find(text_cdiv, cell + 1)
                     if cdiv < 0:
@@ -202,11 +203,19 @@ def scan_server(server, user):
                         exit(1)
                     line.append(html[cell+len(text_cell):cdiv])
                     last_cell = cell
-                # Print the found sortie line
-                print(' '.join(line))
-                last_sortie = ca
+                # Process the sortie using a callback and 
+                # allow it to abort the scan
+                if not sortie_callback(line):
+                    return
             # Move to the next page
             page = page + 1
+
+
+def print_sortie(sortie):
+    """"""
+    # Print the found sortie line
+    print(' '.join(sortie))
+    return True
 
 
 if __name__ == '__main__':
@@ -236,4 +245,4 @@ if __name__ == '__main__':
         server = server + '/'
     # Get the list of renamable track recordings
     tracks = scan_dir(track_dir)
-    scan_server(server, user)
+    scan_server(server, user, print_sortie)
