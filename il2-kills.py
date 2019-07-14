@@ -14,7 +14,84 @@
 # GNU General Public License for more details.
 
 import sys, requests, logging, glob, os.path
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+class Sortie(object):
+    """"""    
+
+    def __init__(self, sortie):
+        """"""
+        # Do basic check on the sortie array
+        if len(sortie) != 8:
+            logging.critical('Unknown sortie format, found %d elements!', len(sortie))
+            raise RuntimeError()
+        # Parse the start date
+        start_date = '%s-%s' % (sortie[0], sortie[1])
+        start_date = datetime.strptime(start_date, '%d.%m.%Y-%H:%M')
+        # Parse the duration time
+        duration = None
+        try:
+            duration = [int(i) for i in sortie[4].split(':')]
+        except:
+            pass
+        if duration is None or len(duration) != 2:
+            logging.critical("Unknown sortie format, duration '%s' is invalid!", sortie[4])
+            raise RuntimeError()
+        duration = timedelta(hours=duration[0], minutes=duration[1])
+        # Parse the number of air kills
+        try:
+            air_kills = int(sortie[5])
+        except:
+            logging.critical("Unknown sortie format, air kills '%s' are invalid!", sortie[5])
+            raise RuntimeError()
+        # Parse the number of ground kills
+        try:
+            ground_kills = int(sortie[6])
+        except:
+            logging.critical("Unknown sortie format, air kills '%s' are invalid!", sortie[6])
+            raise RuntimeError()
+        # Set the attributes of the class
+        self._start_date = start_date
+        self._duration = duration
+        self._air_kills = air_kills
+        self._ground_kills = ground_kills
+
+
+    @property
+    def start(self):
+        """"""
+        return self._start_date
+
+
+    @property
+    def duration(self):
+        """"""
+        return self._duration
+
+
+    @property
+    def end(self):
+        """"""
+        return self._start_date + self.duration
+
+
+    @property
+    def air_kills(self):
+        """"""
+        return self._air_kills
+
+
+    @property
+    def ground_kills(self):
+        """"""
+        return self._ground_kills
+
+
+    @property
+    def kills(self):
+        """"""
+        return self.air_kills + self.ground_kills
+
 
 class TrackRecord(object):
     """"""
@@ -201,7 +278,8 @@ def scan_server(server, user, sortie_callback):
                     if cdiv < 0:
                         logging.critical("Missing '%s' after '%s'!", text_cell, text_cdiv)
                         exit(1)
-                    line.append(html[cell+len(text_cell):cdiv])
+                    col = html[cell+len(text_cell):cdiv]
+                    line.append(col.strip())
                     last_cell = cell
                 # Process the sortie using a callback and 
                 # allow it to abort the scan
@@ -213,8 +291,14 @@ def scan_server(server, user, sortie_callback):
 
 def print_sortie(sortie):
     """"""
-    # Print the found sortie line
-    print(' '.join(sortie))
+    sortie = Sortie(sortie)
+    sdate = sortie.start.strftime('%Y/%m/%d %H:%M:%S')
+    etime = sortie.duration.total_seconds() // 60
+    if etime < 60:
+        etime = '%d minutes' % etime
+    else:
+        etime = '%d hours' % (etime // 60)
+    logging.info("Sortie %s, %s - %d kills.", sdate, etime, sortie.kills)
     return True
 
 
