@@ -137,14 +137,14 @@ class TrackRecord(object):
 
 
     @property
-    def ctime(self):
-        """Get the creation date of the track."""
+    def start(self):
+        """Get the start (creation) date of the track."""
         return self._ctime
 
 
     @property
-    def mtime(self):
-        """Get the last modification date of the track."""
+    def end(self):
+        """Get the end (last modification) date of the track."""
         return self._mtime
 
 
@@ -194,9 +194,9 @@ def scan_dir(dir):
             logging.info("Track %s was already renamed and will be ignored.", track.name)
             continue
         # Estimate the total time of the recording as the 
-        # difference between its creation and last access
-        cstr = track.ctime.strftime('%Y/%m/%d %H:%M:%S')
-        etime = int((track.mtime - track.ctime).total_seconds())
+        # difference between its creation and last modification
+        cstr = track.start.strftime('%Y/%m/%d %H:%M:%S')
+        etime = int((track.end - track.start).total_seconds())
         if etime < 60:
             etime = '%d seconds' % etime
         else:
