@@ -131,98 +131,81 @@ def scan_dir(dir):
 
 def scan_server(server, user):
     """"""
+    # Get the main sorties page
     url = '%ssorties/%s/' % (server, user)
     logging.info("User sorties URL is '%s'.", url)
-
     response = requests.get(url)
     html = response.text
-
+    # The HTML elements that will be used to find sorties data
     text_tour = '<a href="?tour='
     text_ctour = '">'
     text_sortie = 'href="/en/sortie/'
     text_cell = '<div class="cell">'
     text_ca = '</a>'
     text_cdiv = '</div>'
-
-    last_tour = -1
-
+    # List available tours in the server
     logging.info("Listing tours...")
-
     tours = []
-
+    last_tour = -1
     while True:
-
         tour = html.find(text_tour, last_tour + 1)
         if tour < 0:
             break
-
         ctour = html.find(text_ctour, tour + 1)
         if ctour < 0:
             logging.critical("Missing '%s' after '%s'!", text_tour, text_ctour)
             exit(1)
-
         tours.append(html[tour+len(text_tour):ctour])
         last_tour = tour
-
+    # Print the tours found
     logging.info("Tours: %s.", ', '.join(tours))
-
+    # Scan through all tours
     for tour in tours:
-
+        # Scan multi page tours
         page = 1
-
         while True:
-
+            # Get the current page of the current tour
             logging.info("Fetching tour %s, page %d...", tour, page)
-
             url = '%ssorties/%s/?tour=%s&page=%d' % (server, user, tour, page)
             logging.info("Tour URL is '%s'.", url)
-
             response = requests.get(url)
             html = response.text
-
+            # There is no data in the HTML to tell the last page, 
+            # so do trial an error
             if response.status_code == 404:
                 logging.info("URL not found, ending tour.")
                 break
-
+            # Anything other than 'not found' is a real error
             elif response.status_code != 200:
                 logging.critical("Server returned error %d!", response.status_code)
                 exit(1)
-
+            # Scan trough all sorties
             last_sortie = -1
-            n_sortie = 1
-
             while True:
-
                 sortie = html.find(text_sortie, last_sortie + 1)
                 if sortie < 0:
                     break
-
                 ca = html.find(text_ca, sortie + 1)
                 if ca < 0:
                     logging.critical("Missing '%s' after '%s'!", text_sortie, text_ca)
                     exit(1)
-
+                # Scan through all HTML table columns for the data
                 last_cell = sortie
                 line = []
-
                 while True:
-
                     cell = html.find(text_cell, last_cell + 1)
                     if cell < 0 or cell > ca:
                         break
-
                     cdiv = html.find(text_cdiv, cell + 1)
                     if cdiv < 0:
                         logging.critical("Missing '%s' after '%s'!", text_cell, text_cdiv)
                         exit(1)
-
                     line.append(html[cell+len(text_cell):cdiv])
                     last_cell = cell
-
+                # Print the found sortie line
                 print(' '.join(line))
-                n_sortie = n_sortie + 1
                 last_sortie = ca
-
+            # Move to the next page
             page = page + 1
 
 
