@@ -291,7 +291,7 @@ def scan_server(server, user, sortie_callback):
             page = page + 1
 
 
-def print_sortie(sortie):
+def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min):
     """"""
     sortie = Sortie(sortie)
     sdate = sortie.start.strftime('%Y/%m/%d %H:%M:%S')
@@ -301,13 +301,50 @@ def print_sortie(sortie):
     else:
         etime = '%d hours' % (etime // 60)
     logging.info("Sortie %s, %s - %d kills.", sdate, etime, sortie.kills)
-    return True
+    # Stop if the todo list is empty
+    if len(todo_tracks) == 0:
+        logging.info("Track list is empty, stopping scan.")
+        return False
+    # Ignore sorties without any interesting kills
+    if (air_min    >= 0 and sortie.air_kills    > air_min   ) or \
+       (ground_min >= 0 and sortie.ground_kills > ground_min):
+        # Get the oldest track time
+        oldest_track = min([track.start for track in todo_tracks])
+        # Abort the scan of the sortie is already older than the tracks
+        # WARNING: THIS ASSUMES THE SORTIES ARE ORDERED BY DATE ON THE SERVER!
+        # TODO: ADD FLAG TO OVERRIDE THIS
+        if sortie.start < oldest_track:
+            logging.info("Sortie %s is older than the oldest track in the list, stopping scan.", sdate)
+            return False
+        # Try to match the tracks with the sortie
+        tracks_len = len(todo_tracks)
+        while tracks_len > 0:
+            tracks_len = tracks_len - 1
+            track = todo_tracks[tracks_len]
+            # Check if the track record intersects with the sortie
+            if track.end < sortie.start or track.start > sortie.end:
+                continue
+            # Rename intersecting sorties
+            logging.info("Track '%s' intersects with sortie %s and will be renamed.", track.name, sdate)
+            last_name = track.name
+            track.rename(sortie.air_kills, sortie.ground_kills)
+            logging.info("Track '%s' renamed to '%s'.", last_name, track.name)
+            # Remove the track from the todo list
+            todo_tracks.pop(tracks_len)
+            done_tracks.append(track)
+    else:
+        logging.info("Ignoring sortie %s because it does not have the requested kills.", sdate)
+    # Tell the server scan to stop if there is no more sorties do process
+    if len(todo_tracks) == 0:
+        logging.info("Renamed the entire track list, stopping scan.")
+        return False
+    return len(todo_tracks) > 0
 
 
 if __name__ == '__main__':
     # Validate the input arguments
     if len(sys.argv) != 4:
-        print('USAGE: ./il2-kills.py track_dir server_url usercode/username')
+        print('USAGE: ./il2-kills.py track_dir air_min air_max server_url usercode/username')
         exit(1)
     # Initialize the log
     root = logging.getLogger()
@@ -330,5 +367,10 @@ if __name__ == '__main__':
     if server[-1] != '/':
         server = server + '/'
     # Get the list of renamable track recordings
-    tracks = scan_dir(track_dir)
-    scan_server(server, user, print_sortie)
+    todo_tracks = scan_dir(track_dir)
+    done_tracks = []
+    # Create a wrapper method for process_sortie
+    def process_sortie_wrapper(sortie):
+        return process_sortie(sortie, todo_tracks, done_tracks, 0, 0)
+    scan_server(server, user, process_sortie_wrapper)
+
