@@ -306,8 +306,8 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min):
         logging.info("Track list is empty, stopping scan.")
         return False
     # Ignore sorties without any interesting kills
-    if (air_min    >= 0 and sortie.air_kills    > air_min   ) or \
-       (ground_min >= 0 and sortie.ground_kills > ground_min):
+    if (air_min    > 0 and sortie.air_kills    >= air_min   ) or \
+       (ground_min > 0 and sortie.ground_kills >= ground_min):
         # Get the oldest track time
         oldest_track = min([track.start for track in todo_tracks])
         # Abort the scan of the sortie is already older than the tracks
@@ -343,8 +343,8 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min):
 
 if __name__ == '__main__':
     # Validate the input arguments
-    if len(sys.argv) != 4:
-        print('USAGE: ./il2-kills.py track_dir air_min air_max server_url usercode/username')
+    if len(sys.argv) != 6:
+        print('USAGE: ./il2-kills.py track_dir air_min ground_min server_url usercode/username')
         sys.exit(1)
     # Initialize the log
     root = logging.getLogger()
@@ -357,8 +357,10 @@ if __name__ == '__main__':
     root.addHandler(ch)
     # Set the track diretory, the server and the user name
     track_dir = sys.argv[1]
-    server = sys.argv[2]
-    user = sys.argv[3]
+    air_min = sys.argv[2]
+    ground_min = sys.argv[3]
+    server = sys.argv[4]
+    user = sys.argv[5]
     # Validate the server URL
     if not server.startswith('http://') and not server.startswith('https://'):
         logging.critical("server_url must start with http:// or https://!")
@@ -366,10 +368,21 @@ if __name__ == '__main__':
     # Standardize the ending of the server URL to contain /
     if server[-1] != '/':
         server = server + '/'
+    # Validate air_min and ground_min
+    try:
+        air_min = int(air_min)
+    except:
+        logging.critical("Minimum air kills '%s' must be an integer!", air_min)
+        sys.exit(1)
+    try:
+        ground_min = int(ground_min)
+    except:
+        logging.critical("Minimum ground kills '%s' must be an integer!", ground_min)
+        sys.exit(1)
     # Get the list of renamable track recordings
     todo_tracks = scan_dir(track_dir)
     done_tracks = []
     # Create a wrapper method for process_sortie
     def process_sortie_wrapper(sortie):
-        return process_sortie(sortie, todo_tracks, done_tracks, 0, 0)
+        return process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min)
     scan_server(server, user, process_sortie_wrapper)
