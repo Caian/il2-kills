@@ -28,6 +28,7 @@ class Sortie(object):
         # Parse the start date
         start_date = '%s-%s' % (sortie[0], sortie[1])
         start_date = datetime.strptime(start_date, '%d.%m.%Y-%H:%M')
+        start_date = start_date.replace(tzinfo=timezone.utc)
         # Parse the duration time
         duration = None
         try:
