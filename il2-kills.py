@@ -205,6 +205,7 @@ def scan_dir(dir):
         # Add the track to the list of valid tracks to check
         tracks.append(track)
     logging.info("Found %d renamable tracks.", len(tracks))
+    return tracks
 
 
 def scan_server(server, user, sortie_callback):
