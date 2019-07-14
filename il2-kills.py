@@ -233,7 +233,7 @@ def scan_server(server, user, sortie_callback):
         ctour = html.find(text_ctour, tour + 1)
         if ctour < 0:
             logging.critical("Missing '%s' after '%s'!", text_tour, text_ctour)
-            exit(1)
+            sys.exit(1)
         tours.append(html[tour+len(text_tour):ctour])
         last_tour = tour
     # Print the tours found
@@ -257,7 +257,7 @@ def scan_server(server, user, sortie_callback):
             # Anything other than 'not found' is a real error
             elif response.status_code != 200:
                 logging.critical("Server returned error %d!", response.status_code)
-                exit(1)
+                sys.exit(1)
             # Scan trough all sorties
             last_sortie = -1
             while True:
@@ -267,7 +267,7 @@ def scan_server(server, user, sortie_callback):
                 ca = html.find(text_ca, sortie + 1)
                 if ca < 0:
                     logging.critical("Missing '%s' after '%s'!", text_sortie, text_ca)
-                    exit(1)
+                    sys.exit(1)
                 last_sortie = ca
                 # Scan through all HTML table columns for the data
                 last_cell = sortie
@@ -279,7 +279,7 @@ def scan_server(server, user, sortie_callback):
                     cdiv = html.find(text_cdiv, cell + 1)
                     if cdiv < 0:
                         logging.critical("Missing '%s' after '%s'!", text_cell, text_cdiv)
-                        exit(1)
+                        sys.exit(1)
                     col = html[cell+len(text_cell):cdiv]
                     line.append(col.strip())
                     last_cell = cell
@@ -345,7 +345,7 @@ if __name__ == '__main__':
     # Validate the input arguments
     if len(sys.argv) != 4:
         print('USAGE: ./il2-kills.py track_dir air_min air_max server_url usercode/username')
-        exit(1)
+        sys.exit(1)
     # Initialize the log
     root = logging.getLogger()
     root.setLevel(logging.INFO)
@@ -362,7 +362,7 @@ if __name__ == '__main__':
     # Validate the server URL
     if not server.startswith('http://') and not server.startswith('https://'):
         logging.critical("server_url must start with http:// or https://!")
-        exit(1)
+        sys.exit(1)
     # Standardize the ending of the server URL to contain /
     if server[-1] != '/':
         server = server + '/'
@@ -373,4 +373,3 @@ if __name__ == '__main__':
     def process_sortie_wrapper(sortie):
         return process_sortie(sortie, todo_tracks, done_tracks, 0, 0)
     scan_server(server, user, process_sortie_wrapper)
-
