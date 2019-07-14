@@ -13,18 +13,124 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-import sys, requests, logging
+import sys, requests, logging, glob, os.path
+from datetime import datetime, timezone
+
+class TrackRecord(object):
+    """"""
+
+    @staticmethod
+    def get_track_extension():
+        """Get the track file extension."""
+        return '.trk'
+
+
+    def __init__(self, path : str):
+        """Constructor."""
+        # Get the track name from the full file path
+        trkdir, trkname = os.path.split(path)
+        trkname, ext = os.path.splitext(trkname)
+        # Check if it is a valid track file
+        if ext.lower() != TrackRecord.get_track_extension():
+            logging.critical('Invalid track extension %s!', ext)
+            raise RuntimeError()
+        # Check for its matching track directory
+        trkdir, _ = os.path.splitext(path)
+        if not os.path.exists(trkdir):
+            logging.critical('Track file %s missing its matching diretory!', trkname)
+            raise RuntimeError()
+        if not os.path.isdir(trkdir):
+            logging.critical('Track file %s missing its matching diretory!', trkname)
+            raise RuntimeError()
+        # Get the birth and last modification dates of the track file
+        ctime = datetime.fromtimestamp(os.path.getctime(path), timezone.utc)
+        mtime = datetime.fromtimestamp(os.path.getmtime(path), timezone.utc)
+        # Set the attributes of the class
+        self._name = trkname
+        self._dir = trkdir
+        self._ctime = ctime
+        self._mtime = mtime
+
+
+    @property
+    def name(self):
+        """Get the name of the track."""
+        return self._name
+
+
+    @property
+    def ctime(self):
+        """Get the creation date of the track."""
+        return self._ctime
+
+
+    @property
+    def mtime(self):
+        """Get the last modification date of the track."""
+        return self._mtime
+
+
+    @property
+    def was_renamed(self):
+        """Get if the track was already renamed by some program."""
+        # Check the start of the file
+        if not self._name.startswith('dogfight.'):
+            return True
+        # And check for the trailing _00, _01, ...
+        u = self._name.rfind('_')
+        if u < 0:
+            return True
+        for c in self._name[u+1:]:
+            if c < '0' or c > '9':
+                return True
+        return False
+
+
+    def rename(self, air_kills : int, ground_kills : int):
+        """Rename the track file and directory"""
+        new_name = 'ilk_%da_%dg_%s' % (air_kills, ground_kills, self.name)
+        # TODO rename
+        self._name = new_name
+
+
+def scan_dir(dir):
+    """List all track files in a directory."""
+    logging.info("Scanning directory '%s'...", dir)
+    # Check if the directory exists
+    if not os.path.exists(dir):
+        logging.critical("Diretory '%s' does not exist!", dir)
+        raise RuntimeError()
+    if not os.path.isdir(dir):
+        logging.critical("Path '%s' is not a directory!", dir)
+        raise RuntimeError()
+    # Filter all files with the il2 track extension
+    wildcard = '*%s' % TrackRecord.get_track_extension()
+    files = glob.glob(os.path.join(dir, wildcard))
+    tracks = []
+    for file in files:
+        logging.info("Found file '%s'.", file)
+        # Create a track record object from the file path
+        track = TrackRecord(file)
+        # Ignore recordings that were renamed
+        if track.was_renamed:
+            logging.info("Track %s was already renamed and will be ignored.", track.name)
+            continue
+        # Estimate the total time of the recording as the 
+        # difference between its creation and last access
+        cstr = track.ctime.strftime('%Y/%m/%d %H:%M:%S')
+        etime = int((track.mtime - track.ctime).total_seconds())
+        if etime < 60:
+            etime = '%d seconds' % etime
+        else:
+            etime = '%d minutes' % (etime // 60)
+        logging.info("Track '%s' - %s, %s.", track.name, cstr, etime)
+        # Add the track to the list of valid tracks to check
+        tracks.append(track)
+    logging.info("Found %d renamable tracks.", len(tracks))
+
 
 def scan_server(server, user):
     """"""
-
-    if not server.startswith('http://') and not server.startswith('https://'):
-        logging.critical("server_url must start with http:// or https://!")
-        exit(1)
-
-    if server[-1] != '/':
-        server = server + '/'
-
     url = '%ssorties/%s/' % (server, user)
     logging.info("User sorties URL is '%s'.", url)
 
@@ -121,14 +227,11 @@ def scan_server(server, user):
 
 
 if __name__ == '__main__':
-
-    if len(sys.argv) != 3:
-        print('USAGE: ./il2-kills.py server_url usercode/username')
+    # Validate the input arguments
+    if len(sys.argv) != 4:
+        print('USAGE: ./il2-kills.py track_dir server_url usercode/username')
         exit(1)
-
-    server = sys.argv[1]
-    user = sys.argv[2]
-
+    # Initialize the log
     root = logging.getLogger()
     root.setLevel(logging.INFO)
     root.handlers = []
@@ -137,5 +240,17 @@ if __name__ == '__main__':
     formatter = logging.Formatter('%(asctime)s - '+ '%(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     root.addHandler(ch)
-
+    # Set the track diretory, the server and the user name
+    track_dir = sys.argv[1]
+    server = sys.argv[2]
+    user = sys.argv[3]
+    # Validate the server URL
+    if not server.startswith('http://') and not server.startswith('https://'):
+        logging.critical("server_url must start with http:// or https://!")
+        exit(1)
+    # Standardize the ending of the server URL to contain /
+    if server[-1] != '/':
+        server = server + '/'
+    # Get the list of renamable track recordings
+    tracks = scan_dir(track_dir)
     scan_server(server, user)
