@@ -343,19 +343,31 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min):
 
 if __name__ == '__main__':
     # Validate the input arguments
-    if len(sys.argv) != 6:
-        print('USAGE: ./il2-kills.py track_dir air_min ground_min server_url usercode/username')
+    if len(sys.argv) < 6:
+        print('USAGE: ./il2-kills.py track_dir air_min ground_min server_url usercode/username [OPTS: -vv -vvv]')
         sys.exit(1)
+    # Parse the options
+    opts = sys.argv[6:]
     # Initialize the log
+    min_log = logging.WARNING
+    if '-vv' in opts:
+        min_log = logging.INFO
+    if '-vvv' in opts:
+        min_log = logging.DEBUG
     root = logging.getLogger()
-    root.setLevel(logging.INFO)
+    root.setLevel(logging.NOTSET)
     root.handlers = []
     ch = logging.StreamHandler(sys.stderr)
-    ch.setLevel(logging.INFO)
+    ch.setLevel(min_log)
     formatter = logging.Formatter('%(asctime)s - '+ '%(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     root.addHandler(ch)
-    # Set the track diretory, the server and the user name
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(message)s')
+    ch.setFormatter(formatter)
+    root.addHandler(ch)
+    # Set the track diretory, minimum kills, the server and the user name
     track_dir = sys.argv[1]
     air_min = sys.argv[2]
     ground_min = sys.argv[3]
