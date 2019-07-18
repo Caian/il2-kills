@@ -193,6 +193,10 @@ def scan_dir(dir):
         if track.was_renamed:
             logging.info("Track %s was already renamed and will be ignored.", track.name)
             continue
+        # Check if the dates are consistent
+        if track.start > track.end:
+            logging.info("Track %s has inconsistent dates and will be ignored.", track.name)
+            continue
         # Estimate the total time of the recording as the 
         # difference between its creation and last modification
         cstr = track.start.strftime('%Y/%m/%d %H:%M:%S')
