@@ -16,6 +16,8 @@
 import sys, requests, logging, glob, os.path
 from datetime import datetime, timedelta, timezone
 
+INFOP = logging.INFO + 1
+
 class Sortie(object):
     """"""    
 
@@ -173,7 +175,7 @@ class TrackRecord(object):
 
 def scan_dir(dir):
     """List all track files in a directory."""
-    logging.info("Scanning directory '%s'...", dir)
+    logging.log(INFOP, "Scanning directory '%s'...", dir)
     # Check if the directory exists
     if not os.path.exists(dir):
         logging.critical("Diretory '%s' does not exist!", dir)
@@ -191,11 +193,11 @@ def scan_dir(dir):
         track = TrackRecord(file)
         # Ignore recordings that were renamed
         if track.was_renamed:
-            logging.info("Track %s was already renamed and will be ignored.", track.name)
+            logging.log(INFOP, "Track '%s' was already renamed and will be ignored.", track.name)
             continue
         # Check if the dates are consistent
         if track.start > track.end:
-            logging.info("Track %s has inconsistent dates and will be ignored.", track.name)
+            logging.log(INFOP, "Track '%s' has inconsistent dates and will be ignored.", track.name)
             continue
         # Estimate the total time of the recording as the 
         # difference between its creation and last modification
@@ -205,10 +207,10 @@ def scan_dir(dir):
             etime = '%d seconds' % etime
         else:
             etime = '%d minutes' % (etime // 60)
-        logging.info("Track '%s' - %s, %s.", track.name, cstr, etime)
+        logging.log(INFOP, "Track '%s' - %s, %s.", track.name, cstr, etime)
         # Add the track to the list of valid tracks to check
         tracks.append(track)
-    logging.info("Found %d renamable tracks.", len(tracks))
+    logging.log(INFOP, "Found %d renamable tracks.", len(tracks))
     return tracks
 
 
@@ -227,7 +229,7 @@ def scan_server(server, user, sortie_callback):
     text_ca = '</a>'
     text_cdiv = '</div>'
     # List available tours in the server
-    logging.info("Listing tours...")
+    logging.log(INFOP, "Fetching available tours in the server...")
     tours = []
     last_tour = -1
     while True:
@@ -242,8 +244,10 @@ def scan_server(server, user, sortie_callback):
         last_tour = tour
     # Print the tours found
     logging.info("Tours: %s.", ', '.join(tours))
+    logging.log(INFOP, "Found %d tours.", len(tours))
     # Scan through all tours
-    for tour in tours:
+    for itour, tour in enumerate(tours):
+        logging.log(INFOP, "Fetching sorties from tours %d/%d...", itour+1, len(tours))
         # Scan multi page tours
         page = 1
         while True:
@@ -318,7 +322,7 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min):
         # WARNING: THIS ASSUMES THE SORTIES ARE ORDERED BY DATE ON THE SERVER!
         # TODO: ADD FLAG TO OVERRIDE THIS
         if sortie.start < oldest_track:
-            logging.info("Sortie %s is older than the oldest track in the list, stopping scan.", sdate)
+            logging.log(INFOP, "Sortie %s is older than the tracks to rename, stopping fetch...", sdate)
             return False
         # Try to match the tracks with the sortie
         tracks_len = len(todo_tracks)
@@ -330,6 +334,8 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min):
                 continue
             # Rename intersecting sorties
             logging.info("Track '%s' intersects with sortie %s and will be renamed.", track.name, sdate)
+            logging.log(INFOP, "Track '%s' - %d air kills, %d ground kills.", track.name, 
+                sortie.air_kills, sortie.ground_kills)
             last_name = track.name
             track.rename(sortie.air_kills, sortie.ground_kills)
             logging.info("Track '%s' renamed to '%s'.", last_name, track.name)
@@ -340,7 +346,7 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min):
         logging.info("Ignoring sortie %s because it does not have the requested kills.", sdate)
     # Tell the server scan to stop if there is no more sorties do process
     if len(todo_tracks) == 0:
-        logging.info("Renamed the entire track list, stopping scan.")
+        logging.log(INFOP, "Renamed all tracks, stopping fetch...")
         return False
     return len(todo_tracks) > 0
 
@@ -367,7 +373,7 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
     root.addHandler(ch)
     ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.INFO)
+    ch.setLevel(INFOP)
     formatter = logging.Formatter('%(message)s')
     ch.setFormatter(formatter)
     root.addHandler(ch)
