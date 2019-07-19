@@ -13,7 +13,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-import sys, requests, logging, glob, os.path
+import sys, requests, logging, glob, os
 from datetime import datetime, timedelta, timezone
 
 INFOP = logging.INFO + 1
@@ -108,7 +108,7 @@ class TrackRecord(object):
     def __init__(self, path : str):
         """Constructor."""
         # Get the track name from the full file path
-        trkdir, trkname = os.path.split(path)
+        basedir, trkname = os.path.split(path)
         trkname, ext = os.path.splitext(trkname)
         # Check if it is a valid track file
         if ext.lower() != TrackRecord.get_track_extension():
@@ -127,7 +127,7 @@ class TrackRecord(object):
         mtime = datetime.fromtimestamp(os.path.getmtime(path), timezone.utc)
         # Set the attributes of the class
         self._name = trkname
-        self._dir = trkdir
+        self._dir = basedir
         self._ctime = ctime
         self._mtime = mtime
 
@@ -169,7 +169,14 @@ class TrackRecord(object):
     def rename(self, air_kills : int, ground_kills : int):
         """Rename the track file and directory"""
         new_name = 'ilk_%da_%dg_%s' % (air_kills, ground_kills, self.name)
-        # TODO rename
+        # Rename the track and its diretory
+        ext = TrackRecord.get_track_extension()
+        tdir = os.path.join(self._dir, self.name)
+        tnewdir = os.path.join(self._dir, new_name)
+        tfile = tdir + ext
+        tnewfile = tnewdir + ext
+        os.rename(tfile, tnewfile)
+        os.rename(tdir, tnewdir)
         self._name = new_name
 
 
@@ -299,7 +306,7 @@ def scan_server(server, user, sortie_callback):
             page = page + 1
 
 
-def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min):
+def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min, rename):
     """"""
     sortie = Sortie(sortie)
     sdate = sortie.start.strftime('%Y/%m/%d %H:%M:%S')
@@ -332,13 +339,15 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min):
             # Check if the track record intersects with the sortie
             if track.end < sortie.start or track.start > sortie.end:
                 continue
+            logging.info("Track '%s' intersects with sortie %s.", track.name, sdate)
             # Rename intersecting sorties
-            logging.info("Track '%s' intersects with sortie %s and will be renamed.", track.name, sdate)
-            logging.log(INFOP, "Track '%s' - %d air kills, %d ground kills.", track.name, 
-                sortie.air_kills, sortie.ground_kills)
-            last_name = track.name
-            track.rename(sortie.air_kills, sortie.ground_kills)
-            logging.info("Track '%s' renamed to '%s'.", last_name, track.name)
+            msg = ", renaming..." if rename else "."
+            logging.log(INFOP, "Track '%s' - %d air kills, %d ground kills%s", 
+                track.name, sortie.air_kills, sortie.ground_kills, msg)
+            if rename:
+                last_name = track.name
+                track.rename(sortie.air_kills, sortie.ground_kills)
+                logging.info("Track '%s' renamed to '%s'.", last_name, track.name)
             # Remove the track from the todo list
             todo_tracks.pop(tracks_len)
             done_tracks.append(track)
@@ -346,7 +355,7 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min):
         logging.info("Ignoring sortie %s because it does not have the requested kills.", sdate)
     # Tell the server scan to stop if there is no more sorties do process
     if len(todo_tracks) == 0:
-        logging.log(INFOP, "Renamed all tracks, stopping fetch...")
+        logging.log(INFOP, "Finished all tracks, stopping fetch...")
         return False
     return len(todo_tracks) > 0
 
@@ -354,10 +363,11 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min):
 if __name__ == '__main__':
     # Validate the input arguments
     if len(sys.argv) < 6:
-        print('USAGE: ./il2-kills.py track_dir air_min ground_min server_url usercode/username [OPTS: -vv -vvv]')
+        print('USAGE: ./il2-kills.py track_dir air_min ground_min server_url usercode/username [OPTS: -r -vv -vvv]')
         sys.exit(1)
     # Parse the options
     opts = sys.argv[6:]
+    rename = '-r' in opts
     # Initialize the log
     min_log = logging.WARNING
     if '-vv' in opts:
@@ -401,10 +411,15 @@ if __name__ == '__main__':
     except:
         logging.critical("Minimum ground kills '%s' must be an integer!", ground_min)
         sys.exit(1)
+    # Print statement about rename
+    if rename:
+        logging.log(INFOP, "Renaming track files is ON!")
+    else:
+        logging.log(INFOP, "Renaming track files is OFF!")
     # Get the list of renamable track recordings
     todo_tracks = scan_dir(track_dir)
     done_tracks = []
     # Create a wrapper method for process_sortie
     def process_sortie_wrapper(sortie):
-        return process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min)
+        return process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min, rename)
     scan_server(server, user, process_sortie_wrapper)
