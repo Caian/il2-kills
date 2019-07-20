@@ -26,7 +26,8 @@ before_deploy:
 
 deploy:
   provider: releases
-  api_key: ""
+  api_key:
+    secure: "$GH_DEPLOY_KEY"
   file: "$DIST_NAME.zip"
   skip_cleanup: true
   draft: true
