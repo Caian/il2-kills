@@ -6,7 +6,7 @@ install:
   - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
   
 before_script:
-  - py -m pip install pyinstaller
+  - py -m pip install requests pyinstaller
   
 script:
   - pyinstaller --onefile il2-kills.py
