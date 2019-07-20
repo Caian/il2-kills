@@ -10,6 +10,8 @@ before_script:
   
 script:
   - pyinstaller --onefile il2-kills.py
+  - cp LICENSE dist/
+  - cp README.md dist/
   - cd dist
+  - cp README.md README.txt
   - ./il2-kills.exe -h
-  
