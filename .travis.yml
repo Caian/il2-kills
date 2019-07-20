@@ -22,7 +22,7 @@ before_deploy:
   - cd dist
   - ./il2-kills.exe -h
   - cp ./il2-kills.exe "$DIST_NAME"
-  - 7z a "../$DIST_NAME.zip" "$DIST_NAME/"
+  - 7z a "$DIST_NAME.zip" "$DIST_NAME/"
 
 deploy:
   provider: releases
