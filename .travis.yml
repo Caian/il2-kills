@@ -6,15 +6,29 @@ install:
   - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
   
 before_script:
-  - py -m pip install requests pyinstaller
+  - py -m pip install requests
   
 script:
-  - pyinstaller --onefile il2-kills.py
-  - cp LICENSE dist/
-  - cp README.md dist/
-  - cd dist
-  - cp README.md README.txt
-  - ./il2-kills.exe -h
+  - py il2-kills.py -h
 
 before_deploy:
-  - echo Hello
+  - py -m pip install pyinstaller
+  - pyinstaller --onefile il2-kills.py
+  - export DIST_NAME="il2-kills_$TRAVIS_TAG"
+  - mkdir "dist/$DIST_NAME"
+  - cp ./LICENSE "dist/$DIST_NAME/"
+  - cp ./README.md "dist/$DIST_NAME/"
+  - cp ./README.md "dist/$DIST_NAME/README.txt"
+  - cd dist
+  - ./il2-kills.exe -h
+  - cp ./il2-kills.exe "$DIST_NAME"
+  - zip "../$DIST_NAME.zip" "$DIST_NAME/"
+
+deploy:
+  provider: releases
+  api_key: ""
+  file: "$DIST_NAME.zip"
+  skip_cleanup: true
+  draft: true
+  on:
+    tags: true
