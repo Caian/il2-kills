@@ -9,3 +9,7 @@ before_script:
   
 script:
   - echo Hello
+  - py -m pyinstaller --onefile il2-kills.py
+  - cd dist
+  - dir
+  
