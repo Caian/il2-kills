@@ -17,6 +17,7 @@ before_deploy:
   - export DIST_NAME="il2-kills_$TRAVIS_TAG"
   - mkdir "dist/$DIST_NAME"
   - cp ./LICENSE "dist/$DIST_NAME/"
+  - cp ./LICENSE "dist/$DIST_NAME/LICENSE.txt"
   - cp ./README.md "dist/$DIST_NAME/"
   - cp ./README.md "dist/$DIST_NAME/README.txt"
   - cd dist
