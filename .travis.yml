@@ -5,11 +5,11 @@ install:
   - choco install python3
   
 before_script:
-  - py -m pip install --user pyinstaller
+  - py -m pip install pyinstaller
   
 script:
   - echo Hello
-  - py -m pyinstaller --onefile il2-kills.py
+  - pyinstaller --onefile il2-kills.py
   - cd dist
   - dir
   
