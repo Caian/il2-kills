@@ -9,8 +9,7 @@ before_script:
   - py -m pip install pyinstaller
   
 script:
-  - echo Hello
   - pyinstaller --onefile il2-kills.py
   - cd dist
-  - dir
+  - il2-kills.exe
   
