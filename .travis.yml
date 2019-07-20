@@ -1,7 +1,10 @@
 dist: windows
 
-before_install:
+install: 
   - choco install python3
+  
+before_script:
+  - pip3 install --user pyinstaller
   
 script:
   - echo Hello
