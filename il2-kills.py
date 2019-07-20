@@ -19,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 INFOP = logging.INFO + 1
 
 class Sortie(object):
-    """"""    
+    """"""
 
     def __init__(self, sortie):
         """"""
@@ -206,7 +206,7 @@ def scan_dir(dir):
         if track.start > track.end:
             logging.log(INFOP, "Track '%s' has inconsistent dates and will be ignored.", track.name)
             continue
-        # Estimate the total time of the recording as the 
+        # Estimate the total time of the recording as the
         # difference between its creation and last modification
         cstr = track.start.strftime('%Y/%m/%d %H:%M:%S')
         etime = int((track.end - track.start).total_seconds())
@@ -264,7 +264,7 @@ def scan_server(server, user, sortie_callback):
             logging.info("Tour URL is '%s'.", url)
             response = requests.get(url)
             html = response.text
-            # There is no data in the HTML to tell the last page, 
+            # There is no data in the HTML to tell the last page,
             # so do trial an error
             if response.status_code == 404:
                 logging.info("URL not found, ending tour.")
@@ -298,7 +298,7 @@ def scan_server(server, user, sortie_callback):
                     col = html[cell+len(text_cell):cdiv]
                     line.append(col.strip())
                     last_cell = cell
-                # Process the sortie using a callback and 
+                # Process the sortie using a callback and
                 # allow it to abort the scan
                 if not sortie_callback(line):
                     return
@@ -342,7 +342,7 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min, rename
             logging.info("Track '%s' intersects with sortie %s.", track.name, sdate)
             # Rename intersecting sorties
             msg = ", renaming..." if rename else "."
-            logging.log(INFOP, "Track '%s' - %d air kills, %d ground kills%s", 
+            logging.log(INFOP, "Track '%s' - %d air kills, %d ground kills%s",
                 track.name, sortie.air_kills, sortie.ground_kills, msg)
             if rename:
                 last_name = track.name
@@ -362,9 +362,10 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min, rename
 
 if __name__ == '__main__':
     # Validate the input arguments
-    if len(sys.argv) < 6:
-        print('USAGE: ./il2-kills.py track_dir air_min ground_min server_url usercode/username [OPTS: -r -vv -vvv]')
-        sys.exit(1)
+    show_help = '-h' in sys.argv
+    if show_help or len(sys.argv) < 6:
+        print('USAGE: ./il2-kills.py track_dir air_min ground_min server_url usercode/username [OPTS: -h -r -vv -vvv]')
+        sys.exit(0 if show_help else 1)
     # Parse the options
     opts = sys.argv[6:]
     rename = '-r' in opts
@@ -419,7 +420,11 @@ if __name__ == '__main__':
     # Get the list of renamable track recordings
     todo_tracks = scan_dir(track_dir)
     done_tracks = []
+    # Exit if there is no track to rename
+    if len(todo_tracks) == 0:
+        sys.exit(0)
     # Create a wrapper method for process_sortie
     def process_sortie_wrapper(sortie):
         return process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min, rename)
     scan_server(server, user, process_sortie_wrapper)
+    sys.exit(0)
