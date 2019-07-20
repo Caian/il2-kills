@@ -420,6 +420,9 @@ if __name__ == '__main__':
     # Get the list of renamable track recordings
     todo_tracks = scan_dir(track_dir)
     done_tracks = []
+    # Exit if there is no track to rename
+    if len(todo_tracks) == 0:
+        sys.exit(0)
     # Create a wrapper method for process_sortie
     def process_sortie_wrapper(sortie):
         return process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min, rename)
