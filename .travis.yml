@@ -1,4 +1,4 @@
-dist: windows
+os: windows
 
 install: 
   - choco install python3
