@@ -1,0 +1,7 @@
+dist: windows
+
+before_install:
+  - choco install python3
+  
+script:
+  - echo Hello
