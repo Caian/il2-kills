@@ -11,5 +11,5 @@ before_script:
 script:
   - pyinstaller --onefile il2-kills.py
   - cd dist
-  - il2-kills.exe
+  - ./il2-kills.exe
   
