@@ -15,6 +15,7 @@ before_deploy:
   - py -m pip install pyinstaller
   - pyinstaller --onefile il2-kills.py
   - export DIST_NAME="il2-kills_$TRAVIS_TAG"
+  - export ZIP_NAME="${DIST_NAME}_x64.zip"
   - mkdir "dist/$DIST_NAME"
   - cp ./LICENSE "dist/$DIST_NAME/"
   - cp ./LICENSE "dist/$DIST_NAME/LICENSE.txt"
@@ -23,13 +24,13 @@ before_deploy:
   - cd dist
   - ./il2-kills.exe -h
   - cp ./il2-kills.exe "$DIST_NAME"
-  - 7z a "$DIST_NAME.zip" "$DIST_NAME/"
+  - 7z a "$ZIP_NAME" "$DIST_NAME/"
 
 deploy:
   provider: releases
   api_key:
     secure: O2wJjW1fWDpo0O9wIYv0TtrLlHn8FfUvdFH4Dwl9iMl20DjSQaJNrNncIMK/WJuXqS8Xf9YnCWX9P+PxFDoQ8A/jt1y1ouR/tUDH7p8SJjX6vQLAgojKCuMK4vTWm6yeNVBwnegOYi0MV5oXe2ycHPofoRebpJiDwa0uqTP1dg3X4qbqAKEC59X5bK7IfKN9UdSGHUww+V98I68Ua1Sy5EOPRbW7RM00ORDnKDluSP+FHwGs1RdirtCnOyYg10x0mgB38mBiFQB4+Qx/LSlIaaoLlBMp71B9L0YOOnirooaYsPJ/2qGIiluHdfRFyEnUO8spl0yECZfZ2L+H1DxYvvn9pKyKltF+V660f3ow2z672xPbTK/xu+RP//Zu09gejq+Olv0fhkdt1Iu++dFH1nfjJTy9W0P4ZVeJ9HiGddsIF9WryDm3rOYZ6NPTP8cpN8CJrzZbp1rlzcEg/CAcurmABrboyPkyJxH1dSJ36cg3QJQHch0GGlJHwDB55sMWrCluaOUeIwaJ0i0tqei8EOMf/f7t0iKzp7NzLgLvJ4UjkUI/dbadsEzenu7chcNZ1gWMPLewdt5KNQ0iH5dveGOTSN3z7fNAba7G8hOKuDrp7gIcqQ6NIberOFmIWjsrYehocY3tR6dNzAmL92CzDTyL8/rRiZhUtdxpqmMsl/8=
-  file: "$DIST_NAME.zip"
+  file: "$ZIP_NAME.zip"
   skip_cleanup: true
   draft: true
   name: "$DIST_NAME"
