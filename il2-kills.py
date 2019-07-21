@@ -180,6 +180,26 @@ class TrackRecord(object):
         self._name = new_name
 
 
+class ProcessedRecord(object):
+    """"""
+
+    def __init__(self, track : TrackRecord, sortie : Sortie):
+        self._track = track
+        self._sortie = sortie
+
+
+    @property
+    def track(self):
+        """Get the original track."""
+        return self._track
+
+
+    @property
+    def sortie(self):
+        """Get the original sortie associated with the track."""
+        return self._sortie
+
+
 def scan_dir(dir):
     """List all track files in a directory."""
     logging.log(INFOP, "Scanning directory '%s'...", dir)
@@ -350,7 +370,7 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min, rename
                 logging.info("Track '%s' renamed to '%s'.", last_name, track.name)
             # Remove the track from the todo list
             todo_tracks.pop(tracks_len)
-            done_tracks.append(track)
+            done_tracks.append(ProcessedRecord(track, sortie))
     else:
         logging.info("Ignoring sortie %s because it does not have the requested kills.", sdate)
     # Tell the server scan to stop if there is no more sorties do process
@@ -358,6 +378,67 @@ def process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min, rename
         logging.log(INFOP, "Finished all tracks, stopping fetch...")
         return False
     return len(todo_tracks) > 0
+
+
+def pad_text(text, size, padding=' '):
+    """"""
+    text_size = len(text)
+    new_size = max(abs(size), text_size) - text_size
+    padding = padding * new_size
+    if size < 0:
+        return padding + text
+    else:
+        return text + padding
+
+
+def write_log(track_dir, todo_tracks, done_tracks):
+    """"""
+    logging.log(INFOP, "Writting track log file...")
+    log_fmt = 'il2-kills%s.txt'
+    log_file = os.path.join(track_dir, log_fmt % '')
+    # Check if an old log exists and if so create a backup
+    if os.path.exists(log_file):
+        # Format the backup name
+        bak_date = datetime.now().strftime('_%Y%m%d%H%M%S.txt')
+        bak_name = log_fmt % bak_date
+        bak_file = os.path.join(track_dir, bak_name)
+        logging.log(INFOP, "Old track log will be renamed to '%s'.", bak_name)
+        # Rename the old log
+        os.rename(log_file, bak_file)
+    # Format the lines of the log
+    lines = []
+    lines.append('# Tracks not renamed')
+    lines.append('# Track name')
+    lines.append('')
+    todo_formatted = [todo.name for todo in todo_tracks]
+    lines = lines + todo_formatted
+    lines.append('')
+    lines.append('# Tracks renamed')
+    lines.append('# Track name / air kills / ground kills')
+    lines.append('')
+    done_tracks = [[done.track.name, str(done.sortie.air_kills),
+        str(done.sortie.ground_kills)] for done in done_tracks]
+    if len(done_tracks) > 0:
+        # Compute the length of the columns for alignment
+        done_length = [0] * len(done_tracks[0])
+        for track_line in done_tracks:
+            for i in range(len(done_length)):
+                done_length[i] = max(done_length[i], len(track_line[i]))
+        # Add padding
+        for i in range(len(done_length)):
+            done_length[i] += 2
+        # Align the first column to the left and
+        # the remaining columns to the right
+        for i in range(len(done_tracks)):
+            done_tracks[i][0] = pad_text(done_tracks[i][0], done_length[0])
+            for j in range(1, len(done_length)):
+                done_tracks[i][j] = pad_text(done_tracks[i][j], -done_length[j])
+            done_tracks[i] = ''.join(done_tracks[i])
+    lines = lines + done_tracks
+    lines.append('')
+    # Write the lines to the file
+    with open(log_file, 'wt') as log:
+        log.writelines([line + '\n' for line in lines])
 
 
 if __name__ == '__main__':
@@ -369,6 +450,7 @@ if __name__ == '__main__':
     # Parse the options
     opts = sys.argv[6:]
     rename = '-r' in opts
+    outlog = '-l' in opts
     # Initialize the log
     min_log = logging.WARNING
     if '-vv' in opts:
@@ -427,4 +509,7 @@ if __name__ == '__main__':
     def process_sortie_wrapper(sortie):
         return process_sortie(sortie, todo_tracks, done_tracks, air_min, ground_min, rename)
     scan_server(server, user, process_sortie_wrapper)
+    if outlog:
+        write_log(track_dir, todo_tracks, done_tracks)
     sys.exit(0)
+

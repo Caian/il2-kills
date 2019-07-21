@@ -76,7 +76,16 @@ You will get an indication that renaming is `ON` when the program starts.
 
 ### Output to file
 
-Feature comming soon!
+It is also possible to create a log file with the track names, air and ground kills. To do that use the `-l` option:
+
+```
+il2-kills.exe TRACKS_DIRECTORY MIN_AIR_KILLS MIN_GROUND_KILLS SERVER_ADDRESS USER_ID/USER_NAME -l
+```
+
+This option can be used with or without the renaming option.
+
+The log file will be created in the same directory of the tracks and will be called `il2-kills.txt`. A backup copy of this file is automatically created when the program runs.
+
 
 ### Multiple servers
 
