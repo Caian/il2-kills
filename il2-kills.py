@@ -445,7 +445,7 @@ if __name__ == '__main__':
     # Validate the input arguments
     show_help = '-h' in sys.argv
     if show_help or len(sys.argv) < 6:
-        print('USAGE: ./il2-kills.py track_dir air_min ground_min server_url usercode/username [OPTS: -h -r -vv -vvv]')
+        print('USAGE: ./il2-kills.py track_dir air_min ground_min server_url usercode/username [OPTS: -h -l -r -vv -vvv]')
         sys.exit(0 if show_help else 1)
     # Parse the options
     opts = sys.argv[6:]
